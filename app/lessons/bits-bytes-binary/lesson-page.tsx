@@ -200,7 +200,6 @@ export default function LessonPage() {
 
   function revealPrediction() {
     setPredictionRevealed(true);
-    setHexMastered(true);
   }
 
   function checkBitChallenge(event: FormEvent<HTMLFormElement>) {
