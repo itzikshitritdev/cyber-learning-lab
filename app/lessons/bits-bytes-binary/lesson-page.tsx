@@ -6,10 +6,20 @@ const WEIGHTS = [128, 64, 32, 16, 8, 4, 2, 1] as const;
 const EXAMPLE_BITS = [0, 0, 1, 0, 1, 0, 1, 0] as const;
 const CHALLENGE_BITS = [0, 0, 0, 1, 0, 1, 0, 1] as const;
 const INITIAL_BITS = [0, 0, 1, 0, 1, 0, 1, 0];
+const COMPLETION_STORAGE_KEY = 'lesson:bits-bytes-binary';
+const MASTERY_STORAGE_KEY = 'lesson:bits-bytes-binary:mastery';
+const DEFAULT_MASTERY = {
+  bitByte: false,
+  binaryToDecimal: false,
+  decimalToBinary: false,
+  binaryHex: false,
+};
 
 type Feedback = 'correct' | 'wrong' | null;
 type LearningMode = 'explore' | 'predict' | 'challenge';
 type PredictionResult = { decimal: boolean; hex: boolean } | null;
+type MasteryState = typeof DEFAULT_MASTERY;
+type MasteryConcept = keyof MasteryState;
 
 function randomByte(exclude?: number) {
   let next = Math.floor(Math.random() * 256);
@@ -132,19 +142,26 @@ export default function LessonPage() {
   const [showBinaryExplanation, setShowBinaryExplanation] = useState(false);
   const [decimalSolved, setDecimalSolved] = useState(false);
   const [binarySolved, setBinarySolved] = useState(false);
-  const [bitInteracted, setBitInteracted] = useState(false);
-  const [hexMastered, setHexMastered] = useState(false);
+  const [mastery, setMastery] = useState<MasteryState>(DEFAULT_MASTERY);
   const [completed, setCompleted] = useState(false);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
-      const wasCompleted = localStorage.getItem('lesson:bits-bytes-binary') === 'complete';
-      setCompleted(wasCompleted);
-      if (wasCompleted) {
-        setDecimalSolved(true);
-        setBinarySolved(true);
-        setBitInteracted(true);
-        setHexMastered(true);
+      setCompleted(localStorage.getItem(COMPLETION_STORAGE_KEY) === 'complete');
+
+      const storedMastery = localStorage.getItem(MASTERY_STORAGE_KEY);
+      if (storedMastery) {
+        try {
+          const parsed = JSON.parse(storedMastery) as Partial<MasteryState>;
+          setMastery({
+            bitByte: parsed.bitByte === true,
+            binaryToDecimal: parsed.binaryToDecimal === true,
+            decimalToBinary: parsed.decimalToBinary === true,
+            binaryHex: parsed.binaryHex === true,
+          });
+        } catch {
+          setMastery({ ...DEFAULT_MASTERY });
+        }
       }
     });
 
@@ -161,9 +178,18 @@ export default function LessonPage() {
   const bitChallengeExpectedHex = bitChallengeValue.toString(16).toUpperCase().padStart(2, '0');
   const canComplete = decimalSolved && binarySolved;
 
+  function awardMastery(concept: MasteryConcept) {
+    setMastery((current) => {
+      if (current[concept]) return current;
+      const next = { ...current, [concept]: true };
+      localStorage.setItem(MASTERY_STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  }
+
   function toggleBit(index: number) {
     setBits((current) => current.map((bit, bitIndex) => bitIndex === index ? (bit ? 0 : 1) : bit));
-    setBitInteracted(true);
+    if (learningMode === 'explore' || learningMode === 'predict') awardMastery('bitByte');
     if (learningMode === 'predict') {
       setPredictionResult(null);
       setPredictionAttempts(0);
@@ -183,7 +209,6 @@ export default function LessonPage() {
 
   function changeLearningMode(mode: LearningMode) {
     setLearningMode(mode);
-    setBitInteracted(true);
     if (mode === 'challenge') startNewBitChallenge();
   }
 
@@ -195,7 +220,7 @@ export default function LessonPage() {
     };
     setPredictionResult(result);
     if (!result.decimal || !result.hex) setPredictionAttempts((current) => current + 1);
-    if (result.hex) setHexMastered(true);
+    if (result.hex) awardMastery('binaryHex');
   }
 
   function revealPrediction() {
@@ -211,8 +236,7 @@ export default function LessonPage() {
     setBitChallengeResult(result);
     if (result.decimal && result.hex) {
       setBitChallengeScore((current) => current + 1);
-      setHexMastered(true);
-      setBitInteracted(true);
+      awardMastery('binaryHex');
     } else {
       setBitChallengeAttempts((current) => current + 1);
     }
@@ -223,6 +247,7 @@ export default function LessonPage() {
     const correct = Number(decimalAnswer) === 21;
     setDecimalFeedback(correct ? 'correct' : 'wrong');
     setDecimalSolved(correct);
+    if (correct) awardMastery('binaryToDecimal');
     if (!correct) {
       const nextAttempt = decimalAttempts + 1;
       setDecimalAttempts(nextAttempt);
@@ -235,13 +260,45 @@ export default function LessonPage() {
     const correct = binaryAnswer.trim() === '00101010';
     setBinaryFeedback(correct ? 'correct' : 'wrong');
     setBinarySolved(correct);
+    if (correct) awardMastery('decimalToBinary');
     if (!correct) setBinaryAttempts((current) => current + 1);
   }
 
   function completeLesson() {
     if (!canComplete) return;
-    localStorage.setItem('lesson:bits-bytes-binary', 'complete');
+    localStorage.setItem(COMPLETION_STORAGE_KEY, 'complete');
     setCompleted(true);
+  }
+
+  function resetLessonProgress() {
+    localStorage.removeItem(COMPLETION_STORAGE_KEY);
+    localStorage.removeItem(MASTERY_STORAGE_KEY);
+    setBits([...INITIAL_BITS]);
+    setLearningMode('explore');
+    setPredictionDecimal('');
+    setPredictionHex('');
+    setPredictionResult(null);
+    setPredictionAttempts(0);
+    setPredictionRevealed(false);
+    setBitChallengeValue(42);
+    setBitChallengeDecimal('');
+    setBitChallengeHex('');
+    setBitChallengeResult(null);
+    setBitChallengeAttempts(0);
+    setBitChallengeScore(0);
+    setDecimalAnswer('');
+    setBinaryAnswer('');
+    setDecimalFeedback(null);
+    setBinaryFeedback(null);
+    setDecimalAttempts(0);
+    setBinaryAttempts(0);
+    setDecimalHintLevel(0);
+    setShowDecimalExplanation(false);
+    setShowBinaryExplanation(false);
+    setDecimalSolved(false);
+    setBinarySolved(false);
+    setMastery({ ...DEFAULT_MASTERY });
+    setCompleted(false);
   }
 
   return (
@@ -482,12 +539,15 @@ export default function LessonPage() {
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-cyan-300">Mastery summary</p>
                 <h2 id="mastery-title" className="mt-1 text-lg font-semibold text-white">Concepts mastered</h2>
+                {process.env.NODE_ENV === 'development' && (
+                  <button type="button" onClick={resetLessonProgress} className="mt-3 text-xs text-slate-600 underline decoration-slate-700 underline-offset-4 transition hover:text-slate-400">Reset lesson progress</button>
+                )}
               </div>
               <ul className="grid gap-x-7 gap-y-2 sm:grid-cols-2">
-                <MasteryItem mastered={bitInteracted}>Bit / Byte</MasteryItem>
-                <MasteryItem mastered={decimalSolved}>Binary → Decimal</MasteryItem>
-                <MasteryItem mastered={binarySolved}>Decimal → Binary</MasteryItem>
-                <MasteryItem mastered={hexMastered}>Binary ↔ Hex</MasteryItem>
+                <MasteryItem mastered={mastery.bitByte}>Bit / Byte</MasteryItem>
+                <MasteryItem mastered={mastery.binaryToDecimal}>Binary → Decimal</MasteryItem>
+                <MasteryItem mastered={mastery.decimalToBinary}>Decimal → Binary</MasteryItem>
+                <MasteryItem mastered={mastery.binaryHex}>Binary ↔ Hex</MasteryItem>
               </ul>
             </div>
           </section>
