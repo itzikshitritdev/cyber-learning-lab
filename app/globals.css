@@ -1,0 +1,59 @@
+@import 'tailwindcss';
+
+:root {
+  --background: #040915;
+  --foreground: #e8f4ff;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+* { box-sizing: border-box; }
+html { background: var(--background); scroll-behavior: smooth; }
+body {
+  min-height: 100vh;
+  margin: 0;
+  background:
+    radial-gradient(circle at 76% -6%, rgba(30, 89, 255, 0.19), transparent 30rem),
+    radial-gradient(circle at 12% 28%, rgba(38, 216, 255, 0.08), transparent 24rem),
+    linear-gradient(180deg, #030713 0%, #06101f 48%, #040914 100%);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+button, input { font: inherit; }
+button:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid #54e7ff; outline-offset: 3px; }
+::selection { background: rgba(28, 205, 255, 0.3); color: white; }
+.cyber-grid {
+  background-image:
+    linear-gradient(rgba(83, 215, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(83, 215, 255, 0.035) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: linear-gradient(to bottom, black 0%, transparent 90%);
+}
+.glass-card {
+  background: linear-gradient(145deg, rgba(14, 29, 51, 0.88), rgba(7, 17, 33, 0.78));
+  border: 1px solid rgba(130, 194, 255, 0.17);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.035), 0 22px 55px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(18px);
+}
+.soft-divider { border-color: rgba(136, 191, 238, 0.13); }
+.text-glow { text-shadow: 0 0 28px rgba(32, 211, 255, 0.45); }
+.bit-float { animation: bit-float 5s ease-in-out infinite; }
+.bit-float-delayed { animation: bit-float 5.8s 0.8s ease-in-out infinite; }
+.hero-ring { animation: ring-pulse 3.2s ease-in-out infinite; }
+@keyframes bit-float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-9px) rotate(2deg); }
+}
+@keyframes ring-pulse {
+  0%, 100% { opacity: 0.38; transform: scale(0.94); }
+  50% { opacity: 0.75; transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .bit-float, .bit-float-delayed, .hero-ring { animation: none; }
+}
