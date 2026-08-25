@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.SITE_URL ?? 'http://localhost:3000'),
+  metadataBase: new URL('https://cyber-learning-lab.xyxy60.chatgpt.site'),
   title: {
     default: 'Cyber Learning Lab',
     template: '%s | Cyber Learning Lab',
